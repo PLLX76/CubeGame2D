@@ -36,23 +36,6 @@ sf::View view;
 
 int screenW = 800, screenH = 600;
 
-int tapmap[14][15] = {
-		{0,0,0,0,8,0,0,5,0,6,0,0,0,0,0},
-		{4,0,0,1,1,1,1,1,0,1,0,0,1,1,1},
-		{1,1,0,0,0,0,3,0,0,3,0,4,0,0,0},
-		{6,6,4,0,0,0,1,0,1,1,1,1,0,0,0},
-		{1,1,1,1,2,0,0,0,0,0,1,0,6,6,6},
-		{0,0,0,1,4,0,5,0,7,0,1,0,0,4,0},
-		{1,1,1,1,1,0,1,0,1,1,1,1,1,1,1},
-		{0,0,0,0,3,0,0,0,0,0,0,1,0,0,1},
-		{7,0,0,0,2,6,6,6,0,7,0,1,0,0,1},
-		{1,0,0,0,0,0,0,4,0,1,1,1,1,1,1},
-		{0,1,0,1,1,1,1,1,1,1,0,1,0,0,0},
-		{0,0,0,0,0,1,0,0,0,1,0,1,0,0,0},
-		{0,0,1,0,0,0,0,3,0,1,0,1,0,0,0},
-		{6,6,1,1,1,1,1,1,1,1,0,1,0,0,0},
-};
-
 sf::RectangleShape coeur;
 sf::RectangleShape demi_coeur;
 
@@ -60,6 +43,26 @@ int space = false;
 
 std::vector<sf::RectangleShape> vecbox;
 #pragma endregion
+
+#pragma region Levels
+int tapmap[14][15] = {
+	{0,0,0,0,8,0,0,5,0,6,0,0,0,0,0},
+	{4,0,0,1,1,1,1,1,0,1,0,0,1,1,1},
+	{1,1,0,0,0,0,3,0,0,3,0,4,0,0,0},
+	{6,6,4,0,0,0,1,0,1,1,1,1,0,0,0},
+	{1,1,1,1,2,0,0,0,0,0,1,0,6,6,6},
+	{0,0,0,1,4,0,5,0,7,0,1,0,0,4,0},
+	{1,1,1,1,1,0,1,0,1,1,1,1,1,1,1},
+	{0,0,0,0,3,0,0,0,0,0,0,1,0,0,1},
+	{7,0,0,0,2,6,6,6,0,7,0,1,0,0,1},
+	{1,0,0,0,0,0,0,4,0,1,1,1,1,1,1},
+	{0,1,0,1,1,1,1,1,1,1,0,1,0,0,0},
+	{0,0,0,0,0,1,0,0,0,1,0,1,0,0,0},
+	{0,0,1,0,0,0,0,3,0,1,0,1,0,0,0},
+	{6,6,1,1,1,1,1,1,1,1,0,1,0,0,0},
+};
+#pragma endregion
+
 
 #pragma region textures
 	
@@ -83,7 +86,8 @@ void gestion_anim();
 void gestion_clavier();
 void collision(bool collision);
 std::vector<sf::RectangleShape> get_health(int health);
-void reset_vetbox(bool premiere_fois);
+void reset_vetbox(bool position_reset);
+void gestion_health();
 
 #pragma endregion fonction declaration
 
@@ -153,6 +157,8 @@ int main()
 			
 		}
 
+		gestion_health();
+
 		preview.x = px;
 		preview.y = py;
 
@@ -220,6 +226,8 @@ bool echelle_monter = false;
 int is_saut = 0;
 int py_avant = 0;
 bool has_saut = false;
+int douleur = 0;
+int douleur_piege = 0;
 #pragma endregion Variable pour collision et clavier
 void gestion_clavier()
 {
@@ -326,12 +334,22 @@ void collision(bool collision)
 				if (!mechant_colision)
 				{
 					health = health - 1;
+					douleur = 0;
 				}
 
 				mechant_colision = true;
 				std::cout << mechant_colision << std::endl;
 			}
-			else { mechant_colision = false; }
+			else {
+				if (collision) {
+					douleur++;
+					if (douleur == 5000)
+					{
+						mechant_colision = false;
+						douleur = 0;
+					}
+				}
+			}
 
 			top = y * offsetY + 32;
 			bottom = top + offsetY - 32;
@@ -341,9 +359,8 @@ void collision(bool collision)
 			if (tapmap[y][x] == 6 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//piege
-				px = preview.x;
-				py = preview.y;
-
+				health = 6;
+				reset_vetbox(true);
 			}
 
 			top = y * offsetY - offsetY * 2;
@@ -421,9 +438,9 @@ std::vector<sf::RectangleShape> get_health(int health) {
 		}
 	return vie;
 }
-void reset_vetbox(bool premiere_fois)
+void reset_vetbox(bool position_reset)
 {
-	if (!premiere_fois) vecbox.clear();	
+	vecbox.clear();
 	for (int y = 0; y < 14; y++)
 	{
 		for (int x = 0; x < 15; x++)
@@ -490,7 +507,7 @@ void reset_vetbox(bool premiere_fois)
 				//debut.setFillColor(sf::Color(80, 220,255,255));
 				debut.setTexture(&depart_texture);
 				debut.setPosition(sf::Vector2f(x * offsetX, y * offsetY - offsetY * 3 + 10));
-				if (premiere_fois)
+				if (position_reset)
 				{
 					px = debut.getPosition().x + offsetY * 4 / 2;
 					py = debut.getPosition().y + offsetY * 3 + 5;
@@ -498,5 +515,12 @@ void reset_vetbox(bool premiere_fois)
 				vecbox.push_back(debut);
 			}
 		}
+	}
+}
+void gestion_health() {
+	if (health <= 0)
+	{
+		reset_vetbox(true);
+		health = 6;
 	}
 }
