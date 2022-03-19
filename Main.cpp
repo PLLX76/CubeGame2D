@@ -36,7 +36,7 @@ sf::View view;
 
 int screenW = 800, screenH = 600;
 
-const int tapmap[14][15] = {
+int tapmap[14][15] = {
 		{0,0,0,0,8,0,0,5,0,6,0,0,0,0,0},
 		{4,0,0,1,1,1,1,1,0,1,0,0,1,1,1},
 		{1,1,0,0,0,0,3,0,0,3,0,4,0,0,0},
@@ -48,7 +48,7 @@ const int tapmap[14][15] = {
 		{7,0,0,0,2,6,6,6,0,7,0,1,0,0,1},
 		{1,0,0,0,0,0,0,4,0,1,1,1,1,1,1},
 		{0,1,0,1,1,1,1,1,1,1,0,1,0,0,0},
-		{0,0,4,0,0,1,0,0,0,1,0,1,0,0,0},
+		{0,0,0,0,0,1,0,0,0,1,0,1,0,0,0},
 		{0,0,1,0,0,0,0,3,0,1,0,1,0,0,0},
 		{6,6,1,1,1,1,1,1,1,1,0,1,0,0,0},
 };
@@ -57,6 +57,8 @@ sf::RectangleShape coeur;
 sf::RectangleShape demi_coeur;
 
 int space = false;
+
+std::vector<sf::RectangleShape> vecbox;
 #pragma endregion
 
 #pragma region textures
@@ -81,8 +83,9 @@ void gestion_anim();
 void gestion_clavier();
 void collision(bool collision);
 std::vector<sf::RectangleShape> get_health(int health);
+void reset_vetbox(bool premiere_fois);
 
-#pragma endregion
+#pragma endregion fonction declaration
 
 #pragma region Variable collision
 
@@ -94,7 +97,7 @@ bool touche_le_sol_piege = false;
 
 #pragma endregion
 
-//stite color https://htmlcolorcodes.com/fr/
+//site color https://htmlcolorcodes.com/fr/
 
 int main()
 {
@@ -117,81 +120,7 @@ int main()
 
 #pragma endregion chargement des texture des block
 
-	std::vector<sf::RectangleShape> vecbox;
-
-	for (int y = 0; y < 14; y++)
-	{
-		for (int x = 0; x < 15; x++)
-		{
-			if (tapmap[y][x] == 1) {
-				//block
-				sf::RectangleShape block(sf::Vector2f(offsetX,offsetY));
-				//block.setFillColor(sf::Color::Red);
-				block.setTexture(&block_texture);
-				block.setPosition(sf::Vector2f(x*offsetX,y*offsetY));
-				vecbox.push_back(block);
-			}
-			if (tapmap[y][x] == 2) {
-				//block_casse
-				sf::RectangleShape block_casse(sf::Vector2f(offsetX, offsetY));
-				//block_casse.setFillColor(sf::Color(117,10,10,255));
-				block_casse.setTexture(&block_casse_texture);
-				block_casse.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
-				vecbox.push_back(block_casse);
-			}
-			if (tapmap[y][x] == 3) {
-				//portal
-				sf::RectangleShape portal(sf::Vector2f(offsetX, offsetY));
-				//portal.setFillColor(sf::Color::Blue);
-				portal.setTexture(&portal_texture);
-				portal.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
-				vecbox.push_back(portal);
-			}
-			if (tapmap[y][x] == 4) {
-				//champignon
-				sf::RectangleShape champignon(sf::Vector2f(offsetX, offsetY));
-				//champignon.setFillColor(sf::Color::Green);
-				champignon.setTexture(&champigon_texture);
-				champignon.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
-				vecbox.push_back(champignon);
-			}
-			if (tapmap[y][x] == 5) {
-				//mechant
-				sf::RectangleShape mechant(sf::Vector2f(offsetX, offsetY));
-				//mechant.setFillColor(sf::Color::Yellow);
-				mechant.setTexture(&mechant_texture);
-				mechant.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
-				vecbox.push_back(mechant);
-			}
-			if (tapmap[y][x] == 6) {
-				//piege
-				sf::RectangleShape piege(sf::Vector2f(offsetX, offsetY));
-				//piege.setFillColor(sf::Color::Magenta);
-				piege.setTexture(&piege_texture);
-				piege.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
-				vecbox.push_back(piege);
-			}
-			if (tapmap[y][x] == 7) {
-				//echelle
-				sf::RectangleShape echelle(sf::Vector2f(offsetX, offsetY*3));
-				//echelle.setFillColor(sf::Color::White);
-				echelle.setTexture(&echelle_texture);
-				echelle.setPosition(sf::Vector2f(x * offsetX, y * offsetY-offsetY*2));
-				vecbox.push_back(echelle);
-			}
-			if (tapmap[y][x] == 8) {
-				//debut
-				sf::RectangleShape debut(sf::Vector2f(offsetX*4, offsetY*4));
-				//debut.setFillColor(sf::Color(80, 220,255,255));
-				debut.setTexture(&depart_texture);
-				debut.setPosition(sf::Vector2f(x * offsetX, y * offsetY - offsetY * 3 +10));
-				px = debut.getPosition().x + offsetY*4/2;
-				py = debut.getPosition().y + offsetY*3 + 5;
-				vecbox.push_back(debut);
-			}
-		}
-	}
-
+	reset_vetbox(true);
 
 #pragma region elements
 	if (!player.loadFromFile("player.png")) std::cout << "erreur d'image chargement" << std::endl;
@@ -254,7 +183,6 @@ int main()
 	}
 
 }
-
 void view_anim()
 {
 	view.reset(sf::FloatRect(0, 0, screenW, screenH));
@@ -284,11 +212,24 @@ void gestion_anim() {
 		animation = 0;
 	}
 }
+#pragma region Variable
 bool saut = false;
 bool shift = false;
 int fois = 0;
+bool echelle_monter = false;
+int is_saut = 0;
+int py_avant = 0;
+bool has_saut = false;
+#pragma endregion Variable pour collision et clavier
 void gestion_clavier()
 {
+	#pragma region has_saut
+		if (py_avant == py) is_saut++;
+		py_avant = py;
+		if (is_saut == 5) { has_saut = true; is_saut = 0; }
+
+	#pragma endregion verification du saut
+
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
 		anim.y = Right;
 		px += speed;
@@ -302,25 +243,27 @@ void gestion_clavier()
 	else shift = false;
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
-	{	
+	{
+		echelle_monter = true;
 		if (space)
 		{
 			anim.y = Up;
-			py -= 3;
-			std::cout << space << std::endl;
+			py -= 6;
 		}
 		else
 		{
+			echelle_monter = false;
 			if (!saut)
 			{
-				if (touche_le_sol_block || touche_le_sol_block_casse || touche_le_sol_piege)
+				if (has_saut)
 				{
 					saut = true;
 				}
-				std::cout << "touche_le_sol_block :  " << touche_le_sol_block << "   touche_le_sol_block_casse : " << touche_le_sol_block_casse << "   touche_le_sol_piege :  " << touche_le_sol_piege << std::endl;
 			}
 		}
-	}
+		has_saut = false;
+
+	}else echelle_monter = false;
 	if (saut)
 	{
 		fois++;
@@ -335,7 +278,7 @@ void gestion_clavier()
 }
 void collision(bool collision)
 {
-	if (!collision && !space && !saut) { py += 3; anim.y = Down; }
+	if (!collision &&!space && !saut) { py += 3; anim.y = Down;  }
 	for (int y = 0; y < 14; y++)
 	{
 		for (int x = 0; x < 15; x++)
@@ -349,58 +292,31 @@ void collision(bool collision)
 			if (tapmap[y][x] == 1 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//block
-				if (tapmap[y + 2][x] == 7)
-				{
-					if (py + 48 >= top)
-					{
-						if (shift)
-						{
-
-						}
-						else {
-							if (!space)
-							{
-								if (collision)
-								{
-									touche_le_sol_block = true;
-								}
-								
-								px = preview.x;
-								py = preview.y;
-							}
-						}
-					}
-				}
-				
+				if (tapmap[y + 2][x] == 7 && py + 48 >= top && shift);
+				else if (tapmap[y + 2][x] == 7 && py <= bottom&&echelle_monter);
 				else
-				{	
-					if (!space)
-					{
-						if (collision)
-						{
-							touche_le_sol_block = true;
-						}
-						px = preview.x;
-						py = preview.y;
-					}
-				}
+				{					
+					px = preview.x;
+					py = preview.y;
 					
-			}else touche_le_sol_block = false;
+				}
+
+			}
 
 			if (tapmap[y][x] == 2 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//block_casse
 				px = preview.x;
 				py = preview.y;
-				touche_le_sol_block_casse = true;
-
-			}else touche_le_sol_block_casse = false;
+				tapmap[y][x] = 0;
+				reset_vetbox(false);
+			}
 
 			if (tapmap[y][x] == 3 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//portal
-				px = preview.x;
-				py = preview.y;
+				/*px = preview.x;
+				py = preview.y;*/
 
 			}
 			if (tapmap[y][x] == 5 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
@@ -411,40 +327,40 @@ void collision(bool collision)
 				{
 					health = health - 1;
 				}
-				
+
 				mechant_colision = true;
 				std::cout << mechant_colision << std::endl;
 			}
-			else { //mechant_colision = false;
-			//std::cout << mechant_colision << std::endl;
-			}
-			
+			else { mechant_colision = false; }
+
+			top = y * offsetY + 32;
+			bottom = top + offsetY - 32;
+			left = x * offsetX;
+			right = left + offsetX;
+
 			if (tapmap[y][x] == 6 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//piege
 				px = preview.x;
 				py = preview.y;
-				touche_le_sol_piege = true;
-				
-			}else touche_le_sol_piege = false;
+
+			}
+
+			top = y * offsetY - offsetY * 2;
+			bottom = top + offsetY * 3;
+			left = x * offsetX;
+			right = left + offsetX;
 
 			if (tapmap[y][x] == 7 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
-				top = y * offsetY - offsetY * 2;
-				bottom = top + offsetY * 3;
-				left = x * offsetX;
-				right = left + offsetX;
-
 				//echelle
 				space = true;
 			}
 			else
 			{
-				mechant_colision_int ++;
-				if (mechant_colision_int <= 20)
+				if (collision)
 				{
-					space = false;
-					mechant_colision_int = 0;
+						space = false;
 				}
 			}
 
@@ -504,4 +420,83 @@ std::vector<sf::RectangleShape> get_health(int health) {
 			break;
 		}
 	return vie;
+}
+void reset_vetbox(bool premiere_fois)
+{
+	if (!premiere_fois) vecbox.clear();	
+	for (int y = 0; y < 14; y++)
+	{
+		for (int x = 0; x < 15; x++)
+		{
+			if (tapmap[y][x] == 1) {
+				//block
+				sf::RectangleShape block(sf::Vector2f(offsetX, offsetY));
+				//block.setFillColor(sf::Color::Red);
+				block.setTexture(&block_texture);
+				block.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(block);
+			}
+			if (tapmap[y][x] == 2) {
+				//block_casse
+				sf::RectangleShape block_casse(sf::Vector2f(offsetX, offsetY));
+				//block_casse.setFillColor(sf::Color(117,10,10,255));
+				block_casse.setTexture(&block_casse_texture);
+				block_casse.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(block_casse);
+			}
+			if (tapmap[y][x] == 3) {
+				//portal
+				sf::RectangleShape portal(sf::Vector2f(offsetX, offsetY));
+				//portal.setFillColor(sf::Color::Blue);
+				portal.setTexture(&portal_texture);
+				portal.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(portal);
+			}
+			if (tapmap[y][x] == 4) {
+				//champignon
+				sf::RectangleShape champignon(sf::Vector2f(offsetX, offsetY));
+				//champignon.setFillColor(sf::Color::Green);
+				champignon.setTexture(&champigon_texture);
+				champignon.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(champignon);
+			}
+			if (tapmap[y][x] == 5) {
+				//mechant
+				sf::RectangleShape mechant(sf::Vector2f(offsetX, offsetY));
+				//mechant.setFillColor(sf::Color::Yellow);
+				mechant.setTexture(&mechant_texture);
+				mechant.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(mechant);
+			}
+			if (tapmap[y][x] == 6) {
+				//piege
+				sf::RectangleShape piege(sf::Vector2f(offsetX, offsetY));
+				//piege.setFillColor(sf::Color::Magenta);
+				piege.setTexture(&piege_texture);
+				piege.setPosition(sf::Vector2f(x * offsetX, y * offsetY));
+				vecbox.push_back(piege);
+			}
+			if (tapmap[y][x] == 7) {
+				//echelle
+				sf::RectangleShape echelle(sf::Vector2f(offsetX, offsetY * 3));
+				//echelle.setFillColor(sf::Color::White);
+				echelle.setTexture(&echelle_texture);
+				echelle.setPosition(sf::Vector2f(x * offsetX, y * offsetY - offsetY * 2));
+				vecbox.push_back(echelle);
+			}
+			if (tapmap[y][x] == 8) {
+				//debut
+				sf::RectangleShape debut(sf::Vector2f(offsetX * 4, offsetY * 4));
+				//debut.setFillColor(sf::Color(80, 220,255,255));
+				debut.setTexture(&depart_texture);
+				debut.setPosition(sf::Vector2f(x * offsetX, y * offsetY - offsetY * 3 + 10));
+				if (premiere_fois)
+				{
+					px = debut.getPosition().x + offsetY * 4 / 2;
+					py = debut.getPosition().y + offsetY * 3 + 5;
+				}
+				vecbox.push_back(debut);
+			}
+		}
+	}
 }
