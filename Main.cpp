@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include <fstream>
+
 #include <string>
 #include <iostream>
 #include <cstdlib> 
@@ -35,6 +37,8 @@ sf::Vector2f preview;
 sf::View view;
 
 int screenW = 800, screenH = 600;
+std::string title = "GameCube2D";
+int resolution = 32;
 
 sf::RectangleShape coeur;
 sf::RectangleShape demi_coeur;
@@ -42,9 +46,12 @@ sf::RectangleShape demi_coeur;
 int space = false;
 
 std::vector<sf::RectangleShape> vecbox;
+
+bool fullscreen;
 #pragma endregion
 
 #pragma region Levels
+
 int tapmap[14][15] = {
 	{0,0,0,0,8,0,0,5,0,6,0,0,0,0,0},
 	{4,0,0,1,1,1,1,1,0,1,0,0,1,1,1},
@@ -63,7 +70,6 @@ int tapmap[14][15] = {
 };
 #pragma endregion
 
-
 #pragma region textures
 	
 sf::Texture block_texture,
@@ -81,13 +87,14 @@ sf::Texture block_texture,
 
 #pragma region Fonction
 	
-void view_anim();
+void view_anim(sf::Event event);
 void gestion_anim();
 void gestion_clavier();
 void collision(bool collision);
 std::vector<sf::RectangleShape> get_health(int health);
 void reset_vetbox(bool position_reset);
 void gestion_health();
+void config();
 
 #pragma endregion fonction declaration
 
@@ -105,8 +112,15 @@ bool touche_le_sol_piege = false;
 
 int main()
 {
+	config();
 
-	app.create(sf::VideoMode(screenW, screenH,32),"Test Colision");
+	if (fullscreen) {
+		screenW = sf::VideoMode::getFullscreenModes()[0].width;
+		screenH = sf::VideoMode::getFullscreenModes()[0].height;
+		app.create(sf::VideoMode(screenW, screenH, resolution), title, sf::Style::Fullscreen);
+		app.setMouseCursorVisible(false);
+	}
+	if (!fullscreen) app.create(sf::VideoMode(screenW, screenH, resolution), title, sf::Style::Default);
 	app.setFramerateLimit(60);
 
 #pragma region chargement image
@@ -168,7 +182,7 @@ int main()
 
 		collision(true);
 
-		view_anim();
+		view_anim(event);
 
 		animation++;
 		gestion_anim();
@@ -189,11 +203,17 @@ int main()
 	}
 
 }
-void view_anim()
+void view_anim(sf::Event event)
 {
+	if (event.type == sf::Event::Resized)
+	{
+		screenW = event.size.width;
+		screenH = event.size.height;
+	}
+
 	view.reset(sf::FloatRect(0, 0, screenW, screenH));
 	sf::Vector2f position(screenW / 2, screenH / 2);
-	position.x = sprite_player.getPosition().x + taille/2 - (screenW / 2);
+	position.x = sprite_player.getPosition().x + taille / 2 - (screenW / 2);
 	position.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
 	view.reset(sf::FloatRect(position.x, position.y, screenW, screenH));
 	app.setView(view);
@@ -245,6 +265,24 @@ void gestion_clavier()
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
 		anim.y = Left;
 		px -= speed;
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::F11))
+	{
+		fullscreen = !fullscreen;
+		if (fullscreen) {
+			app.close();
+			app.create(sf::VideoMode::getFullscreenModes()[0], "GameCube2D", sf::Style::Fullscreen); 
+			screenW = sf::VideoMode::getFullscreenModes()[0].width;
+			screenH = sf::VideoMode::getFullscreenModes()[0].height;
+			app.setMouseCursorVisible(true);
+			std::cout << speed << std::endl;
+		}
+		else if (!fullscreen) { 
+			app.close();
+			app.create(sf::VideoMode(800, 600,32),"GameCube2D");
+			app.setMouseCursorVisible(true);
+			screenW = 800; screenH = 600;
+		}
 	}
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift)) shift = true;
@@ -523,4 +561,19 @@ void gestion_health() {
 		reset_vetbox(true);
 		health = 6;
 	}
+}
+void config()
+{
+	std::ifstream ifs("Config/window.ini");
+
+	if (ifs.is_open())
+	{
+		std::getline(ifs, title);
+		ifs >> screenW;
+		ifs >> screenH;
+		ifs >> resolution;
+		ifs >> fullscreen;
+	}
+	//std::cout << fullscreen << std::endl;
+	ifs.close();
 }
