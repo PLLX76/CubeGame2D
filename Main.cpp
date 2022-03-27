@@ -1,4 +1,4 @@
-//#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
+#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
@@ -71,6 +71,9 @@ sf::RectangleShape btn1;
 sf::RectangleShape btn2;
 sf::Text number;
 int latence_int = 0;
+
+sf::RectangleShape help_rect;
+bool help = false;
 #pragma endregion
 
 #pragma region textures
@@ -88,7 +91,7 @@ sf::Texture block_texture,
 			fin_texture;
 sf::Texture fleche_droite,
 			fleche_gauche;
-
+sf::Texture help_texture;
 #pragma endregion variable textures des blocks
 
 #pragma region Fonction
@@ -104,6 +107,7 @@ void config();
 void charge();
 void button();
 void latence(bool latence);
+bool help_function();
 
 #pragma endregion fonction declaration
 
@@ -148,6 +152,7 @@ int main()
 	if (!fin_texture.loadFromFile(("resourcespack/" + resourcespack + "/texture/fin.png").c_str())) if (!fin_texture.loadFromFile("resourcespack/default/texture/fin.png")) std::cout << "erreur chargement d'image 'fin.png'" << std::endl;
 	if (!fleche_droite.loadFromFile(("resourcespack/" + resourcespack + "/texture/fleche-droite.png").c_str())) if (!fleche_droite.loadFromFile("resourcespack/default/texture/fleche-droite.png")) std::cout << "erreur de chargement d'image 'fleche-droite.png'" << std::endl;
 	if (!fleche_gauche.loadFromFile(("resourcespack/" + resourcespack + "/texture/fleche-gauche.png").c_str())) if (!fleche_gauche.loadFromFile("resourcespack/default/texture/fleche-gauche.png")) std::cout << "erreur de chargement d'image 'fleche-gauche.png'" << std::endl;
+	if (!help_texture.loadFromFile(("resourcespack/" + resourcespack + "/bouton.png").c_str())) if (!coeur_texture.loadFromFile("resourcespack/default/bouton.png")) std::cout << "erreur d'image chargement 'bouton.png'" << std::endl;
 #pragma endregion chargement des texture des block
 
 	reset_vetbox(true);
@@ -201,6 +206,9 @@ int main()
 	number.setString(sf::String(std::to_string(level)));
 	number.setFont(font);
 	number.setFillColor(sf::Color(107, 87, 70, 255));
+
+	help_rect.setSize(sf::Vector2f(800, 360));
+	help_rect.setTexture(&help_texture);
 
 #pragma endregion
 
@@ -276,6 +284,9 @@ int main()
 		app.draw(btn1);
 		app.draw(number);
 		app.draw(btn2);
+
+		help_function();
+		if (help) app.draw(help_rect);
 
 		app.display();
 
@@ -355,6 +366,10 @@ void gestion_clavier()
 			reset_vetbox(true);
 			health = 6;
 		}
+	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::H))
+	{
+		if (latence_int == 0) { help = !help; latence(true); }
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::F11))
 	{
@@ -732,13 +747,18 @@ void config()
 	}
 	ifs.close();
 
+	int save_record = 0;
+
 	std::ifstream save(("resourcespack/" + resourcespack + "/save/save.txt").c_str());
 	if (save.is_open())
 	{
-		save >> record;
+		save >> save_record;
 	}
 	save.close();
 
+	if (save_record == 0) { help = true; save_record++; }
+
+	save_record = record;
 	if (level == 0) level = record;
 }
 void charge() {
@@ -814,4 +834,15 @@ void latence(bool latence) {
 			latence_int = 0;
 		}
 	}
+}
+bool help_function()
+{
+	sf::Vector2f position(screenW / 2, screenH / 2);
+	position.x = sprite_player.getPosition().x + taille / 2 - (screenW / 2);
+	position.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
+
+	help_rect.setPosition(position.x, position.y);
+	help_rect.setSize(sf::Vector2f(screenW,screenH));
+
+	return true;
 }
