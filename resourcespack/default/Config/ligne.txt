@@ -1,0 +1,8 @@
+titre : string
+taille de la fenetre :  with, heigth : int
+resolution : int
+fullscreen : bool
+speed : int
+vie : int max 6
+resourcespack name : string
+level : int
