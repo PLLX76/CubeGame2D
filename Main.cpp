@@ -14,7 +14,7 @@
 #include <iostream>
 #include <cstdlib> 
 #include <vector>
-#include <ctime> importation des module 
+#include <ctime>
 
 #pragma region Variable
 sf::RenderWindow app;
@@ -41,6 +41,7 @@ int taille = 64;
 
 int record = 1;
 sf::Text record_text;
+sf::Text time_in_level;
 
 int offsetX = taille, offsetY = taille;
 
@@ -48,7 +49,7 @@ int px = 0, py = 0;
 
 enum Dir { Down, Left, Right, Up };
 sf::Vector2i anim(1, Down);
-int animation = 18 - speed - 1;
+//int animation = 18 - speed - 1;
 
 bool colision_pers = false;
 
@@ -75,21 +76,36 @@ sf::RectangleShape btn1_no;
 sf::RectangleShape btn2_no;
 sf::Text number;
 
-int latence_int = 0;
-int latence_int_tnt = 0;
-int latence_int_portal = 0;
-int latence_int_item = 0;
-
 sf::RectangleShape help_rect;
 bool help = false;
 bool mouvement = false;
 
 sf::Vector2f position_coeur(screenW / 2, screenH / 2);
 
-sf::Clock time_speed;
 bool speed_item_pressed = false;
 
 int use_potion_int = 0;
+
+int reload = 10;
+#pragma endregion
+
+#pragma region Clock
+
+sf::Clock time_speed;
+sf::Clock time_mechant_damage;
+sf::Clock time_anim;
+sf::Clock time_fps;
+sf::Clock time_fullscrenn;
+sf::Clock time_portal;
+sf::Clock time_item_change;
+sf::Clock time_manette;
+sf::Clock time_heal_sound;
+sf::Clock time_Reload_And_HelpMenu;
+sf::Clock time_bouton_level;
+sf::Clock time_tnt;
+
+sf::Clock time_in_level_second;
+int time_in_level_minute = 0;
 #pragma endregion
 
 #pragma region textures
@@ -147,19 +163,15 @@ void config();
 void charge();
 void button();
 void timer();
-void latence(bool latence, int latence_max);
-void latence_TNT(bool latence, int latence_max);
-void latence_portal(bool latence, int latence_max);
 bool help_function();
 void gestion_mannette();
 void draw_item_selecte(int change_place);
 void draw_item_selecte();
+void fullscrenn(bool ignore);
 
 #pragma endregion fonction declaration
 
 #pragma region Variable collision
-
-bool mechant_colision = false;
 int mechant_colision_int = 0;
 bool touche_le_sol_block = false;
 bool touche_le_sol_block_casse = false;
@@ -175,12 +187,8 @@ int main()
 	config();
 	charge();
 
-	if (fullscreen) {
-		screenW = sf::VideoMode::getFullscreenModes()[0].width;
-		screenH = sf::VideoMode::getFullscreenModes()[0].height;
-		app.create(sf::VideoMode(screenW, screenH, resolution), title, sf::Style::Fullscreen);
-	}
-	if (!fullscreen) app.create(sf::VideoMode(screenW, screenH, resolution), title, sf::Style::Default);
+	fullscrenn(true);
+	
 	app.setFramerateLimit(60);
 	if (!icon.loadFromFile(("resourcespack/" + resourcespack + "/mechant.png").c_str())) if (!icon.loadFromFile("resourcespack/default/mechant.png")) std::cout << "error icon ligne 126" << std::endl;
 	app.setIcon(500, 500, icon.getPixelsPtr());
@@ -279,6 +287,12 @@ int main()
 	record_text.setString(sf::String("record : " + std::to_string(record)));
 	record_text.setPosition(sf::Vector2f(0, 50));
 
+	time_in_level.setFont(font);
+	time_in_level.setFillColor(sf::Color::Red);
+	time_in_level.setStyle(sf::Text::Bold);
+	time_in_level.setString(sf::String("time : " + std::to_string(time_in_level_minute)+" : " + std::to_string(time_in_level_second.getElapsedTime().asSeconds())));
+	time_in_level.setPosition(sf::Vector2f(0, 100));
+
 	btn1.setSize(sf::Vector2f(50, 50));
 	btn1.setPosition(sf::Vector2f(50, 50));
 	btn1.setTexture(&fleche_gauche);
@@ -327,103 +341,111 @@ int main()
 			else mouvement = false;
 			if (event.type == sf::Event::MouseWheelScrolled)
 			{
-				if (latence_int_item == 0)
+				if (time_item_change.getElapsedTime().asMilliseconds() > 50)
 				{
 					draw_item_selecte(event.mouseWheelScroll.delta);
-					latence_item_change(true, 15);
+					time_item_change.restart();
 				}
 			}
 		}
-		if (level > record) { record = level; record_text.setString(sf::String("record : " + std::to_string(record))); }
+		if (time_fps.getElapsedTime().asMilliseconds() > reload)
+		{
 
-		screenH = app.getSize().y;
-		screenW = app.getSize().x;
+			if (level > record) { record = level; record_text.setString(sf::String("record : " + std::to_string(record))); }
+
+			screenH = app.getSize().y;
+			screenW = app.getSize().x;
 
 #pragma region set-position
-		sf::Vector2f position(screenW / 2, screenH / 2);
-		position.x = sprite_player.getPosition().x + taille / 2 + (screenW / 2);
-		position.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
-		record_text.setPosition(sf::Vector2f(position.x - 220, position.y + 10));
+			sf::Vector2f position(screenW / 2, screenH / 2);
+			position.x = sprite_player.getPosition().x + taille / 2 + (screenW / 2);
+			position.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
+			record_text.setPosition(sf::Vector2f(position.x - 220, position.y + 10));
+			time_in_level.setPosition(sf::Vector2f(position.x - 220, position.y + 50));
 
-		position.x = sprite_player.getPosition().x + taille / 2;
-		position.y = sprite_player.getPosition().y + taille / 2 + (screenH / 2);
-		number.setPosition(sf::Vector2f(position.x - 90, position.y - 45));
-		btn2.setPosition(sf::Vector2f(position.x - 50, position.y - 50));
-		btn1.setPosition(sf::Vector2f(position.x - 150, position.y - 50));
-		btn2_no.setPosition(sf::Vector2f(position.x - 50, position.y - 50));
-		btn1_no.setPosition(sf::Vector2f(position.x - 150, position.y - 50));
+			position.x = sprite_player.getPosition().x + taille / 2;
+			position.y = sprite_player.getPosition().y + taille / 2 + (screenH / 2);
+			number.setPosition(sf::Vector2f(position.x - 90, position.y - 45));
+			btn2.setPosition(sf::Vector2f(position.x - 50, position.y - 50));
+			btn1.setPosition(sf::Vector2f(position.x - 150, position.y - 50));
+			btn2_no.setPosition(sf::Vector2f(position.x - 50, position.y - 50));
+			btn1_no.setPosition(sf::Vector2f(position.x - 150, position.y - 50));
 
-		position_item.x = sprite_player.getPosition().x + taille / 2 - screenW / 2;
-		position_item.y = sprite_player.getPosition().y + taille / 2 + screenH / 2;
+			position_item.x = sprite_player.getPosition().x + taille / 2 - screenW / 2;
+			position_item.y = sprite_player.getPosition().y + taille / 2 + screenH / 2;
 
-		position_coeur.x = sprite_player.getPosition().x + taille / 2 - (screenW / 2);
-		position_coeur.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
+			position_coeur.x = sprite_player.getPosition().x + taille / 2 - (screenW / 2);
+			position_coeur.y = sprite_player.getPosition().y + taille / 2 - (screenH / 2);
 #pragma endregion
 
-		gestion_health();
+			gestion_health();
 
-		preview.x = px;
-		preview.y = py;
+			preview.x = px;
+			preview.y = py;
 
-		collision(false);
+			collision(false);
 
-		gestion_clavier();
-		button();
-		gestion_mannette();
+			gestion_clavier();
+			button();
+			gestion_mannette();
 
-		collision(true);
+			collision(true);
 
-		if (speed_item_pressed) timer();
+			if (speed_item_pressed) timer();
 
-		view_anim();
+			view_anim();
 
-		animation++;
-		gestion_anim();
+			gestion_anim();
 
-		sprite_player.setPosition(px, py);
+			sprite_player.setPosition(px, py);
 
-		help_function();
+			help_function();
 
-		app.clear();
+			app.clear();
 
-		latence(false, 0);
-		latence_TNT(false, 0);
-		latence_portal(false, 0);
-		latence_item_change(false, 0);
+			number.setString(sf::String(std::to_string(level)));
 
-		number.setString(sf::String(std::to_string(level)));
+			if (time_in_level_second.getElapsedTime().asSeconds() >= 60)
+			{
+				time_in_level_second.restart();
+				time_in_level_minute++;
+			}
+			int int_of_time_in_level_second = trunc(time_in_level_second.getElapsedTime().asSeconds());
+			time_in_level.setString(sf::String("time: " + std::to_string(time_in_level_minute) + "m " + std::to_string(int_of_time_in_level_second)+"s"));
 
-		std::vector<sf::RectangleShape> vie = get_health(health);
+			std::vector<sf::RectangleShape> vie = get_health(health);
+			for (int i = 0; i < vecbox.size(); i++) app.draw(vecbox[i]);
+			for (int i = 0; i < vie.size(); i++) app.draw(vie[i]);
 
-		for (int i = 0; i < vecbox.size(); i++) app.draw(vecbox[i]);
-		for (int i = 0; i < vie.size(); i++) app.draw(vie[i]);
+			app.draw(sprite_player);
 
-		app.draw(sprite_player);
+			draw_item_selecte();
 
-		draw_item_selecte();
+			if (have_item)
+			{
+				app.draw(item);
+				app.draw(item_text);
+			}
+			app.draw(item_sword);
 
-		if (have_item)
-		{
-			app.draw(item);
-			app.draw(item_text);
+			app.draw(record_text);
+			app.draw(time_in_level);
+
+			if (record != 1 && record != 0)
+			{
+				if (level != 1) app.draw(btn1);
+				else app.draw(btn1_no);
+				app.draw(number);
+				if (level != record) app.draw(btn2);
+				else app.draw(btn2_no);
+			}
+			if (help) app.draw(help_rect);
+
+			app.display();
+
+			time_fps.restart();
 		}
-		app.draw(item_sword);
-		app.draw(record_text);
-
-		if (record != 1 && record != 0)
-		{
-			if (level != 1) app.draw(btn1);
-			else app.draw(btn1_no);
-			app.draw(number);
-			if (level != record) app.draw(btn2);
-			else app.draw(btn2_no);
-		}
-		if (help) app.draw(help_rect);
-
-		app.display();
-
 	}
-
 }
 #pragma region Variable
 bool saut = false;
@@ -457,10 +479,10 @@ void gestion_anim() {
 	}
 	else item_sword.setPosition({ -1000,-1000 });
 	
-	if (animation == 18 - speed)
+	if (time_anim.getElapsedTime().asMilliseconds() > 300)
 	{
 		anim.x++;
-		animation = 0;
+		time_anim.restart();
 	}
 	if (anim.y != Down && !saut && !jump_item)
 	{
@@ -480,18 +502,18 @@ void gestion_clavier()
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Add))
 	{
-		if (latence_int_item == 0)
+		if (time_item_change.getElapsedTime().asMilliseconds() > 50)
 		{
 			draw_item_selecte(1);
-			latence_item_change(true,15);
+			time_item_change.restart();
 		}
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Subtract))
 	{
-		if (latence_int_item == 0)
+		if (time_item_change.getElapsedTime().asMilliseconds() > 50)
 		{
 			draw_item_selecte(-1);
-			latence_item_change(true, 15);
+			time_item_change.restart();
 		}
 	}
 
@@ -505,9 +527,9 @@ void gestion_clavier()
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
 	{
-		if (latence_int == 0)
+		if (time_Reload_And_HelpMenu.getElapsedTime().asMilliseconds() > 50)
 		{
-			latence(true, 10);
+			time_Reload_And_HelpMenu.restart();
 			ChargeLevels(level);
 			ChargePortal(level);
 			reset_vetbox(true);
@@ -516,25 +538,9 @@ void gestion_clavier()
 	}
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::H))
 	{
-		if (latence_int == 0) { help = !help; latence(true,20); }
+		if (time_Reload_And_HelpMenu.getElapsedTime().asMilliseconds() > 50) { help = !help; time_Reload_And_HelpMenu.restart();}
 	}
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::F11))
-	{
-		fullscreen = !fullscreen;
-		if (fullscreen) {
-			app.setSize(sf::Vector2u(sf::VideoMode::getFullscreenModes()[0].width, sf::VideoMode::getFullscreenModes()[0].height));
-			app.setPosition(sf::Vector2i(0, 0));
-			screenW = sf::VideoMode::getFullscreenModes()[0].width;
-			screenH = sf::VideoMode::getFullscreenModes()[0].height;
-			app.setMouseCursorVisible(true);
-			std::cout << speed << std::endl;
-		}
-		else if (!fullscreen) {
-			app.setSize(sf::Vector2u(800, 600));
-			app.setMouseCursorVisible(true);
-			screenW = 800; screenH = 600;
-		}
-	}
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::F11)) fullscrenn(false);
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) || sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) shift = true;
 	else shift = false;
@@ -707,7 +713,7 @@ void collision(bool collision)
 				//portal
 
 				//std::cout << "portal :  " << tp << ", " << tp_int << std::endl;
-				if (latence_int_portal == 0 && collision)
+				if (time_portal.getElapsedTime().asSeconds() >= 1 && collision)
 				{
 					std::cout << px << " " << py << std::endl;
 					tp_int = 0;
@@ -716,7 +722,7 @@ void collision(bool collision)
 					py = getPortalTp(y, x).y;
 
 					sound_portal.play();
-					latence_portal(true, 100);
+					time_portal.restart();
 				}
 
 			}
@@ -724,43 +730,33 @@ void collision(bool collision)
 			{
 				//mechant
 
-				if (!mechant_colision)
+				if (time_mechant_damage.getElapsedTime().asMilliseconds() > 500)
 				{
 					health = health - 1;
 					douleur = 0;
 					sound_damage.play();
 					remove_all_item();
+					time_mechant_damage.restart();
 				}
 
-				mechant_colision = true;
-			}
-			else {
-				if (collision) {
-					douleur++;
-					if (douleur == 5000)
-					{
-						mechant_colision = false;
-						douleur = 0;
-					}
-				}
 			}
 			if (tapmap[y][x] == 10 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
 				//fin
 				health = 6;
-				if (latence_int == 0)
+				if (time_heal_sound.getElapsedTime().asSeconds() > 2)
 				{
-					latence(true, 100);
+					time_heal_sound.restart();
 					sound_heal.play();
 				}
 			}
 			if (tapmap[y][x] == 11 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
-				if (latence_int_tnt == 0)
+				if (time_tnt.getElapsedTime().asSeconds() >= 1)
 				{
-					latence_TNT(true, 40);
+					time_tnt.restart();
 				}
-				else if (latence_int_tnt == 39)
+				else if (time_tnt.getElapsedTime().asMilliseconds() >= 900 && time_tnt.getElapsedTime().asMilliseconds() < 1000)
 				{
 
 					tapmap[y][x] = 0;
@@ -780,7 +776,6 @@ void collision(bool collision)
 						tapmap[y + 1][x - 1] = 0;
 					if (0 < y - 1 && withtmap > x + 1)
 						tapmap[y - 1][x + 1] = 0;
-					latence_int_tnt = 0;
 
 					reset_vetbox(false);
 				}
@@ -799,6 +794,8 @@ void collision(bool collision)
 				ChargePortal(level);
 				reset_vetbox(true);
 				record_text.setString(sf::String("record : " + std::to_string(record)));
+				time_in_level_minute = 0;
+				time_in_level_second.restart();
 			}
 
 			top = y * offsetY + 32;
@@ -1014,6 +1011,7 @@ void config()
 {
 	std::ifstream ifs(("resourcespack/" + resourcespack + "/Config/window.ini").c_str());
 
+
 	if (ifs.is_open())
 	{
 		std::getline(ifs, title);
@@ -1027,6 +1025,7 @@ void config()
 		ifs >> font_path;
 	}
 	ifs.close();
+
 
 	int save_record = 0;
 
@@ -1073,16 +1072,18 @@ void button() {
 		{
 			if (level != 0)
 			{
-				if (latence_int == 0)
+				if (time_bouton_level.getElapsedTime().asMilliseconds() > 150)
 				{
 
 					level--;
 					if (level < 1) level = 1;
-					latence(true, 10);
+					time_bouton_level.restart();
 					charge();
 					reset_vetbox(true);
 					use_potion = false;
 					use_potion_int = 10;
+					time_in_level_minute = 0;
+					time_in_level_second.restart();
 				}
 			}
 		}
@@ -1100,15 +1101,17 @@ void button() {
 		{
 			if (level != record)
 			{
-				if (latence_int == 0)
+				if (time_bouton_level.getElapsedTime().asMilliseconds() > 150)
 				{
 					level++;
 					if (level > record) level--;
-					latence(true, 10);
+					time_bouton_level.restart();
 					charge();
 					reset_vetbox(true);
 					use_potion = false;
 					use_potion_int = 10;
+					time_in_level_minute = 0;
+					time_in_level_second.restart();
 				}
 			}
 		}
@@ -1190,58 +1193,6 @@ void timer()
 		}
 	}
 }
-int max_latence = 10;
-void latence(bool latence, int latence_max) {
-	if (latence_max != 0) max_latence = latence_max;
-	if (latence) latence_int++;
-	if (latence_int != 0)
-	{
-		latence_int++;
-		if (latence_int == max_latence)
-		{
-			latence_int = 0;
-		}
-	}
-}
-int max_latence_tnt = 10;
-void latence_TNT(bool latence, int latence_max) {
-	if (latence_max != 0) max_latence_tnt = latence_max;
-	if (latence) latence_int_tnt++;
-	if (latence_int_tnt != 0)
-	{
-		latence_int_tnt++;
-		if (latence_int_tnt == max_latence_tnt)
-		{
-			latence_int_tnt = 0;
-		}
-	}
-}
-int max_latence_portal = 10;
-void latence_portal(bool latence, int latence_max) {
-	if (latence_max != 0) max_latence_portal = latence_max;
-	if (latence) latence_int_portal++;
-	if (latence_int_portal != 0)
-	{
-		latence_int_portal++;
-		if (latence_int_portal == max_latence_portal)
-		{
-			latence_int_portal = 0;
-		}
-	}
-}
-int max_latence_item = 10;
-void latence_item_change(bool latence, int latence_max) {
-	if (latence_max != 0) max_latence_item = latence_max;
-	if (latence) latence_int_item++;
-	if (latence_int_item != 0)
-	{
-		latence_int_item++;
-		if (latence_int_item == max_latence_item)
-		{
-			latence_int_item = 0;
-		}
-	}
-}
 bool help_function()
 {
 	sf::Vector2f position(screenW / 2, screenH / 2);
@@ -1278,9 +1229,9 @@ void gestion_mannette()
 	}
 	if (sf::Joystick::isButtonPressed(0, 3))
 	{
-		if (latence_int == 0)
+		if (time_manette.getElapsedTime().asMilliseconds() >= 150)
 		{
-			latence(true, 10);
+			time_manette.restart();
 			ChargeLevels(level);
 			ChargePortal(level);
 			reset_vetbox(true);
@@ -1295,14 +1246,17 @@ void gestion_mannette()
 	{
 		if (level != record)
 		{
-			if (latence_int == 0)
+			if (time_manette.getElapsedTime().asMilliseconds() >= 150)
 			{
+				time_manette.restart();
+
 				level++;
 				if (level > record) level--;
-				latence(true, 15);
 				ChargeLevels(level);
 				ChargePortal(level);
 				reset_vetbox(true);
+				time_in_level_minute = 0;
+				time_in_level_second.restart();
 			}
 		}
 	}
@@ -1310,15 +1264,17 @@ void gestion_mannette()
 	{
 		if (level != 0)
 		{
-			if (latence_int == 0)
+			if (time_manette.getElapsedTime().asMilliseconds() >= 150)
 			{
+				time_manette.restart();
+
 				level--;
 				if (level < 1) level = 1;
-
-				latence(true, 15);
 				ChargeLevels(level);
 				ChargePortal(level);
 				reset_vetbox(true);
+				time_in_level_minute = 0;
+				time_in_level_second.restart();
 			}
 		}
 	}
@@ -1329,18 +1285,18 @@ void gestion_mannette()
 
 	if (JoystickZ > 0)
 	{
-		if (latence_int_item == 0)
+		if (time_item_change.getElapsedTime().asMilliseconds() > 150)
 		{
 			draw_item_selecte(-1);
-			latence_item_change(true, 15);
+			time_item_change.restart();
 		}
 	}
 	if (JoystickZ < 0)
 	{
-		if (latence_int_item == 0)
+		if (time_item_change.getElapsedTime().asMilliseconds() > 150)
 		{
 			draw_item_selecte(1);
-			latence_item_change(true, 15);
+			time_item_change.restart();
 		}
 	}
 	if (JoystickX > 1)
@@ -1458,4 +1414,28 @@ void draw_item_selecte() {
 	}
 	else have_item = false;
 
+}
+void fullscrenn(bool ignore) {
+	if (ignore || time_fullscrenn.getElapsedTime().asMilliseconds() > 200)
+	{
+		if (!ignore)
+		{
+			fullscreen = !fullscreen;
+		}
+		if (fullscreen) {
+			if (!ignore) reload = 14;
+			time_fps.restart();
+			app.create(sf::VideoMode::getFullscreenModes()[0], title, sf::Style::Fullscreen);
+			screenW = sf::VideoMode::getFullscreenModes()[0].width;
+			screenH = sf::VideoMode::getFullscreenModes()[0].height;
+		}
+		else if (!fullscreen) {
+			if (!ignore) reload = 14;
+			time_fps.restart();
+			app.create(sf::VideoMode(800, 600,resolution), title, sf::Style::Default);
+			screenW = 800;
+			screenH = 600;
+		}
+		time_fullscrenn.restart();
+	}
 }
