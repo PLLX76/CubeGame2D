@@ -56,7 +56,7 @@ void ChargeLevels(int niveau) {
 	std::ifstream ifs;
 	if (resource_level_existed) ifs.open(("resourcespack/" + resourcespack + "/Levels/level" + std::to_string(niveau) + ".txt").c_str());
 	else ifs.open(("resourcespack/default/Levels/level" + std::to_string(niveau) + ".txt").c_str());
-	
+
 	if (ifs.is_open())
 	{
 		ifs >> heightmap;
@@ -84,14 +84,13 @@ void ChargeLevels(int niveau) {
 	}
 	else
 	{
-		level = 0;
+		level--;
 	}
-	
-
 }
 void ChargePortal(int niveau) {
-	std::ifstream ifs(("resourcespack/" + resourcespack + "/Levels/level" + std::to_string(niveau) + "portal.txt").c_str());
-
+	std::ifstream ifs;
+	if (resource_level_existed) ifs.open(("resourcespack/" + resourcespack + "/Levels/level" + std::to_string(niveau) + "portal.txt").c_str());
+	else ifs.open(("resourcespack/default/Levels/level" + std::to_string(niveau) + "portal.txt").c_str());
 	if (ifs.is_open())
 	{
 		for (int y = 0; y < heightmap; y++)
@@ -102,9 +101,5 @@ void ChargePortal(int niveau) {
 			}
 		}
 		ifs.close();
-	}
-	else
-	{
-		level = 0;
 	}
 }

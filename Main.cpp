@@ -106,7 +106,7 @@ sf::Clock time_tnt;
 
 sf::Clock time_in_level_second;
 int time_in_level_minute = 0;
-#pragma endregion
+#pragma endregion time
 
 #pragma region textures
 
@@ -168,6 +168,7 @@ void gestion_mannette();
 void draw_item_selecte(int change_place);
 void draw_item_selecte();
 void fullscrenn(bool ignore);
+void couleur();
 
 #pragma endregion fonction declaration
 
@@ -179,13 +180,25 @@ bool touche_le_sol_piege = false;
 
 #pragma endregion
 
+#pragma region color
+struct Color
+{
+	int r;
+	int g;
+	int b;
+};
+sf::Color color_right_text;
+sf::Color color_level_number;
+#pragma endregion
+
 //site color https://htmlcolorcodes.com/fr/
 
 int main()
 {
-	get_resource_level_existed();
 	config();
+	get_resource_level_existed();
 	charge();
+	couleur();
 
 	fullscrenn(true);
 	
@@ -282,13 +295,13 @@ int main()
 	if (!font.loadFromFile(("resourcespack/" + resourcespack + "/police/" + font_path).c_str())) if (!font.loadFromFile("resourcespack/default/police/police.ttf")) std::cout << "erreur de chargement de police de charact�re 'police.ttf'" << std::endl;
 
 	record_text.setFont(font);
-	record_text.setFillColor(sf::Color::Red);
+	record_text.setFillColor(color_right_text);
 	record_text.setStyle(sf::Text::Bold);
 	record_text.setString(sf::String("record : " + std::to_string(record)));
 	record_text.setPosition(sf::Vector2f(0, 50));
 
 	time_in_level.setFont(font);
-	time_in_level.setFillColor(sf::Color::Red);
+	time_in_level.setFillColor(color_right_text);
 	time_in_level.setStyle(sf::Text::Bold);
 	time_in_level.setString(sf::String("time : " + std::to_string(time_in_level_minute)+" : " + std::to_string(time_in_level_second.getElapsedTime().asSeconds())));
 	time_in_level.setPosition(sf::Vector2f(0, 100));
@@ -312,7 +325,7 @@ int main()
 	number.setPosition(sf::Vector2f(110, 55));
 	number.setString(sf::String(std::to_string(level)));
 	number.setFont(font);
-	number.setFillColor(sf::Color(107, 87, 70, 255));
+	number.setFillColor(color_level_number);
 
 	help_rect.setSize(sf::Vector2f(800, 360));
 	help_rect.setTexture(&help_texture);
@@ -735,14 +748,13 @@ void collision(bool collision)
 					health = health - 1;
 					douleur = 0;
 					sound_damage.play();
-					remove_all_item();
 					time_mechant_damage.restart();
 				}
 
 			}
 			if (tapmap[y][x] == 10 && px + 38 >= left && px <= right && py + 48 >= top && py <= bottom)
 			{
-				//fin
+				//heal
 				health = 6;
 				if (time_heal_sound.getElapsedTime().asSeconds() > 2)
 				{
@@ -790,9 +802,7 @@ void collision(bool collision)
 				//fin
 				if (level == record) sound_levelup.play();
 				level++;
-				ChargeLevels(level);
-				ChargePortal(level);
-				reset_vetbox(true);
+				charge();
 				record_text.setString(sf::String("record : " + std::to_string(record)));
 				time_in_level_minute = 0;
 				time_in_level_second.restart();
@@ -812,7 +822,6 @@ void collision(bool collision)
 				{
 					health = 6;
 					charge();
-					reset_vetbox(true);
 					sound_damage.play();
 					remove_all_item();
 				}
@@ -1044,12 +1053,7 @@ void config()
 void charge() {
 	ChargeLevels(level);
 	ChargePortal(level);
-	if (level == 0)
-	{
-		level++;
-		ChargeLevels(level);
-		ChargePortal(level);
-	}
+	reset_vetbox(true);
 }
 std::vector<int> inv = get_item_list();
 void button() {
@@ -1079,7 +1083,6 @@ void button() {
 					if (level < 1) level = 1;
 					time_bouton_level.restart();
 					charge();
-					reset_vetbox(true);
 					use_potion = false;
 					use_potion_int = 10;
 					time_in_level_minute = 0;
@@ -1107,7 +1110,6 @@ void button() {
 					if (level > record) level--;
 					time_bouton_level.restart();
 					charge();
-					reset_vetbox(true);
 					use_potion = false;
 					use_potion_int = 10;
 					time_in_level_minute = 0;
@@ -1252,9 +1254,7 @@ void gestion_mannette()
 
 				level++;
 				if (level > record) level--;
-				ChargeLevels(level);
-				ChargePortal(level);
-				reset_vetbox(true);
+				charge();
 				time_in_level_minute = 0;
 				time_in_level_second.restart();
 			}
@@ -1270,9 +1270,7 @@ void gestion_mannette()
 
 				level--;
 				if (level < 1) level = 1;
-				ChargeLevels(level);
-				ChargePortal(level);
-				reset_vetbox(true);
+				charge();
 				time_in_level_minute = 0;
 				time_in_level_second.restart();
 			}
@@ -1438,4 +1436,19 @@ void fullscrenn(bool ignore) {
 		}
 		time_fullscrenn.restart();
 	}
+}
+void couleur() {
+	std::ifstream ifs(("resourcespack/" + resourcespack + "/color/color.ini").c_str());
+
+	Color struct_right_text{};
+	Color struct_level_number{};
+
+	if (ifs.is_open())
+	{
+		ifs >> struct_right_text.r >> struct_right_text.g >> struct_right_text.b;
+		ifs >> struct_level_number.r >> struct_level_number.g >> struct_level_number.b;
+	}
+	ifs.close();
+	color_right_text.r = struct_right_text.r; color_right_text.g = struct_right_text.g; color_right_text.b = struct_right_text.b;
+	color_level_number.r = struct_level_number.r; color_level_number.g = struct_level_number.g; color_level_number.b = struct_level_number.b;
 }
